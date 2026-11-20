@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS</title>
+  <style>
+    :root {
+      --accent: #0088cc; --bg: #e5e5ea; --panel: #ffffff; --chat-bg: #efeae2;
+      --text: #111111; --sub: #707579; --border: #e6e6e6; --msg-in: #ffffff;
+      --msg-out: #dcf8c6; --act: #f0f4f8; --input-bg: #f4f4f5;
+    }
+    body.dark {
+      --bg: #0e1117; --panel: #17212b; --chat-bg: #0e1621;
+      --text: #f5f5f5; --sub: #8b9bb4; --border: #101921; --msg-in: #182533;
+      --msg-out: #2b5278; --act: #202b36; --input-bg: #17212b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); height: 100dvh; display: flex; justify-content: center; overflow: hidden; }
+
+    #splash {
+      position: fixed; inset: 0; background: #0b0f19; z-index: 999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.5s;
+    }
+    .arrows { display: flex; align-items: center; font-size: 64px; font-weight: 900; color: var(--accent); position: relative; }
+    .arr-l { animation: hitL 0.8s cubic-bezier(.2,.9,.3,1.2) forwards; }
+    .arr-r { animation: hitR 0.8s cubic-bezier(.2,.9,.3,1.2) forwards; }
+    .spark { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 25px 12px var(--accent); opacity: 0; animation: boom 0.6s 0.65s ease-out forwards; }
+    .brand { margin-top: 15px; font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #fff; opacity: 0; animation: fadeUp 0.5s 0.7s forwards; }
+    @keyframes hitL { 0% { transform: translateX(-140px); opacity: 0; } 80% { transform: translateX(6px); opacity: 1; } 100% { transform: translateX(0); } }
+    @keyframes hitR { 0% { transform: translateX(140px); opacity: 0; } 80% { transform: translateX(-6px); opacity: 1; } 100% { transform: translateX(0); } }
+    @keyframes boom { 0% { opacity: 1; transform: translate(-50%,-50%) scale(0.2); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(4); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; align-items: center; justify-content: center; z-index: 50; padding: 15px; }
+    .modal { background: var(--panel); padding: 22px; border-radius: 18px; width: 100%; max-width: 340px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .modal h3 { margin-bottom: 12px; }
+    .modal input[type="text"], .modal input[type="tel"] { width: 100%; padding: 11px; margin: 7px 0; border: 1px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text); outline: none; }
+    .btn { width: 100%; padding: 11px; background: var(--accent); color: #fff; border: none; border-radius: 10px; cursor: pointer; margin-top: 8px; font-weight: bold; }
+    .btn.sec { background: #6c757d; }
+
+    .app { width: 100%; max-width: 1050px; background: var(--panel); display: flex; height: 100%; position: relative; }
+    .side { width: 340px; border-right: 1px solid var(--border); display: flex; flex-direction: column; position: relative; }
+    .top { background: var(--accent); color: #fff; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+    .av { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.25); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; object-fit: cover; flex-shrink: 0; }
+
+    .tabs { display: flex; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--panel); }
+    .tab { flex: 1; padding: 10px 6px; text-align: center; font-size: 13px; font-weight: 600; color: var(--sub); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+    .tab.act { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .list { flex: 1; overflow-y: auto; }
+    .item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .item:hover, .item.act { background: var(--act); }
+    .arch-btn { margin-left: auto; background: none; border: none; color: var(--sub); font-size: 16px; cursor: pointer; padding: 4px; }
+
+    .fab { position: absolute; bottom: 20px; right: 20px; width: 54px; height: 54px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 28px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 10; }
+    .fab-menu { position: absolute; bottom: 82px; right: 20px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 5px 20px rgba(0,0,0,0.25); display: none; flex-direction: column; overflow: hidden; z-index: 15; }
+    .fab-menu div { padding: 12px 18px; cursor: pointer; font-size: 14px; font-weight: 500; border-bottom: 1px solid var(--border); }
+    .fab-menu div:hover { background: var(--act); }
+    .main { flex: 1; display: flex; flex-direction: column; background: var(--chat-bg); position: relative; }
+    .msgs { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    @keyframes popIn { 0% { opacity: 0; transform: translateY(15px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    .m { max-width: 75%; padding: 8px 12px; border-radius: 14px; background: var(--msg-in); align-self: flex-start; animation: popIn 0.25s ease; position: relative; }
+    .m.me { background: var(--msg-out); align-self: flex-end; }
+    .m-auth { font-size: 11px; font-weight: bold; color: var(--accent); margin-bottom: 3px; }
+    .m img, .m video { max-width: 100%; max-height: 260px; border-radius: 10px; display: block; margin-bottom: 4px; }
+    .m audio { max-width: 220px; height: 36px; display: block; margin-bottom: 4px; }
+    .t { font-size: 10px; color: var(--sub); text-align: right; margin-top: 4px; }
+    .react-badge { position: absolute; bottom: -10px; right: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1px 6px; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .react-bar { display: none; position: absolute; top: -36px; left: 0; background: var(--panel); padding: 4px 8px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); gap: 6px; z-index: 15; }
+    .m.me .react-bar { left: auto; right: 0; }
+    .m:hover .react-bar { display: flex; }
+    .react-bar span { font-size: 18px; cursor: pointer; transition: transform 0.15s; }
+    .react-bar span:hover { transform: scale(1.3); }
+    @keyframes flyFire { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-120px) scale(2.2); } }
+    .fire-anim { position: fixed; font-size: 36px; pointer-events: none; z-index: 99; animation: flyFire 0.9s ease-out forwards; }
+
+    form { display: flex; padding: 8px 10px; background: var(--input-bg); gap: 6px; align-items: center; }
+    form input[type="text"] { flex: 1; padding: 10px 14px; border: none; border-radius: 20px; background: var(--panel); color: var(--text); outline: none; font-size: 15px; }
+    .c-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--accent); color: #fff; cursor: pointer; font-size: 17px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .c-btn.rec { background: #e53935; animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
+    .icon-btn { background: none; border: none; color: #fff; font-size: 19px; cursor: pointer; padding: 4px; }
+    .back { display: none; }
+    .ro-bar { padding: 14px; text-align: center; background: var(--input-bg); color: var(--sub); font-size: 14px; display: none; }
+
+    @media (max-width: 700px) {
+      .side { width: 100%; } .main { display: none; width: 100%; }
+      .app.open .side { display: none; } .app.open .main { display: flex; }
+      .back { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="arrows"><span class="arr-l">❯</span><span class="arr-r">❮</span><div class="spark"></div></div>
+  <div class="brand">NEXUS</div>
+</div>
+
+<div class="overlay" id="authOv" style="display:flex">
+  <div class="modal">
+    <h3>Вход в NEXUS</h3>
+    <input id="lPhone" type="text" placeholder="Номер телефона (или код админа)">
+    <input id="lName" type="text" placeholder="Ваше имя">
+    <button class="btn" onclick="login()">Войти</button>
+  </div>
+</div>
+
+<div class="overlay" id="setOv">
+  <div class="modal">
+    <h3>Настройки профиля</h3>
+    <img id="pImg" class="av" style="width:80px;height:80px;margin:0 auto 10px;display:none;">
+    <input type="file" id="fInput" accept="image/*" style="font-size:13px;margin-bottom:6px">
+    <input id="sName" type="text" placeholder="Ваше имя">
+    <input id="sPhone" type="text" placeholder="Ваш номер / код">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0;padding:8px;background:var(--input-bg);border-radius:10px">
+      <span style="font-size:14px">Цвет темы:</span>
+      <input type="color" id="colPick" onchange="setAccent(this.value)" style="border:none;width:40px;height:30px;cursor:pointer">
+      <button type="button" onclick="toggleTheme()" style="padding:5px 10px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer">🌙 / ☀️</button>
+    </div>
+    <button class="btn" onclick="saveProf()">Сохранить</button>
+    <button class="btn sec" onclick="setOv.style.display='none'">Закрыть</button>
+  </div>
+</div>
+<div class="overlay" id="findOv">
+  <div class="modal">
+    <h3>Найти по номеру</h3>
+    <input id="qPh" type="text" placeholder="Введите номер или 78_Poma">
+    <button class="btn" onclick="findUser()">Найти и написать</button>
+    <button class="btn sec" onclick="findOv.style.display='none'">Отмена</button>
+  </div>
+</div>
+
+<div class="overlay" id="grpOv">
+  <div class="modal">
+    <h3>Создать группу</h3>
+    <input id="gTitle" type="text" placeholder="Название группы">
+    <input id="gMems" type="text" placeholder="Номера через запятую">
+    <button class="btn" onclick="createGrp()">Создать</button>
+    <button class="btn sec" onclick="grpOv.style.display='none'">Отмена</button>
+  </div>
+</div>
+
+<div class="overlay" id="callOv">
+  <div class="modal">
+    <div style="font-size:48px;margin-bottom:10px">📞</div>
+    <h3 id="callName">Звонок...</h3>
+    <p id="callStat" style="color:var(--sub);margin-bottom:15px">Соединение...</p>
+    <button class="btn" style="background:#e53935" onclick="endCall()">Завершить</button>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <div class="side">
+    <div class="top">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openSet()">
+        <img id="myAv" class="av" style="display:none"><div id="myFb" class="av">Я</div>
+        <div><b id="myNm">Имя</b><br><small id="myPh" style="opacity:0.85"></small></div>
+      </div>
+      <button class="icon-btn" onclick="openSet()" title="Настройки">⚙</button>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <div class="tab act" onclick="setTab('all',this)">Все</div>
+      <div class="tab" onclick="setTab('chats',this)">Чаты</div>
+      <div class="tab" onclick="setTab('groups',this)">Группы</div>
+      <div class="tab" onclick="setTab('arch',this)">Архив</div>
+      <div class="tab" onclick="setTab('calls',this)">Звонки</div>
+    </div>
+
+    <div class="list" id="list"></div>
+
+    <div class="fab-menu" id="fabMenu">
+      <div onclick="fabMenu.style.display='none';findOv.style.display='flex'">🔍 Найти по номеру</div>
+      <div onclick="fabMenu.style.display='none';grpOv.style.display='flex'">👥 Создать группу</div>
+      <div onclick="fabMenu.style.display='none';openChat(me.phone)">★ Избранное</div>
+    </div>
+    <button class="fab" onclick="fabMenu.style.display = fabMenu.style.display==='flex'?'none':'flex'">+</button>
+  </div>
+
+  <div class="main">
+    <div class="top">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="renamePeer()">
+        <button class="icon-btn back" onclick="event.stopPropagation();app.classList.remove('open')">←</button>
+        <div>
+          <b id="cTitle">NEXUS Official 👑</b>
+          <div id="cSub" style="font-size:11px;opacity:0.8">нажмите на имя, чтобы подписать</div>
+        </div>
+      </div>
+      <button class="icon-btn" id="callBtn" onclick="startCall()" title="Позвонить">📞</button>
+    </div>
+    <div class="msgs" id="msgs"></div>
+    <div class="ro-bar" id="roBar">Писать в официальный канал может только Админ 👑</div>
+    <form id="chatForm" onsubmit="send(event)">
+      <input type="file" id="mediaIn" accept="image/*,video/*" style="display:none" onchange="sendMedia(event)">
+      <button type="button" class="c-btn" style="background:transparent;color:var(--sub);font-size:20px" onclick="mediaIn.click()">📎</button>
+      <input type="text" id="mIn" placeholder="Сообщение..." autocomplete="off">
+      <button type="button" class="c-btn" id="micBtn" style="background:#555" onclick="toggleRec()">🎤</button>
+      <button type="submit" class="c-btn">➤</button>
+    </form>
+  </div>
+</div>
+
+<script src="fb-app.js"></script>
+<script src="fb-db.js"></script>
+
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyB2a8gukSJkxexI_Zzedtnzz1AB4N4XME4",
+    authDomain: "zhiguli5d.firebaseapp.com",
+    databaseURL: "https://zhiguli5d-default-rtdb.firebaseio.com",
+    projectId: "zhiguli5d"
+  });
+  const db = firebase.database().ref('nexus_app');
+
+
+
+
+  const ADMIN_CODE = '78_Poma';
+  let me = null, users = {}, groups = {}, msgs = {}, calls = {};
+  let active = 'grp_official', curTab = 'all', newAv = undefined, rec = null, chunks = [], callTimer = null;
+  let archived = JSON.parse(localStorage.getItem('arch') || '[]');
+
+  setTimeout(() => { splash.style.opacity = '0'; setTimeout(() => splash.remove(), 500); }, 1600);
+
+  const savedColor = localStorage.getItem('accent');
+  if (savedColor) { document.documentElement.style.setProperty('--accent', savedColor); colPick.value = savedColor; }
+  if (localStorage.getItem('dark') === '1') document.body.classList.add('dark');
+
+  function setAccent(c) { document.documentElement.style.setProperty('--accent', c); localStorage.setItem('accent', c); }
+  function toggleTheme() {
+    const d = document.body.classList.toggle('dark');
+    localStorage.setItem('dark', d ? '1' : '0');
+  }
+
+  function norm(p) {
+    const raw = String(p || '').trim();
+    if (raw === ADMIN_CODE) return ADMIN_CODE;
+    let d = raw.replace(/\D/g, '');
+    if (d.length === 11 && d.startsWith('8')) d = '7' + d.slice(1);
+    return d;
+  }
+
+  // Слушаем изменения в облаке Firebase в реальном времени
+  db.child('users').on('value', s => { users = s.val() || {}; if (me && users[me.phone]) { me = users[me.phone]; updTop(); } drawList(); });
+  db.child('groups').on('value', s => {
+    groups = s.val() || {};
+    if (!groups.grp_official) {
+      db.child('groups/grp_official').set({ id: 'grp_official', title: 'NEXUS Official 👑', official: true, members: { [ADMIN_CODE]: true } });
+    }
+    drawList();
+  });
+  db.child('msgs').on('value', s => { msgs = s.val() || {}; drawList(); drawMsgs(); });
+  db.child('calls').on('value', s => { calls = s.val() || {}; if (curTab === 'calls') drawList(); });
+
+  const savedPh = localStorage.getItem('ph');
+  if (savedPh) enterApp(savedPh, '');
+
+  function login() {
+    const p = norm(lPhone.value);
+    if (!p) return;
+    enterApp(p, lName.value.trim());
+  }
+
+  async function enterApp(p, name) {
+    localStorage.setItem('ph', p);
+    const isAdmin = p === ADMIN_CODE;
+    const snap = await db.child('users/' + p).once('value');
+    let u = snap.val();
+    if (!u) {
+      u = { phone: p, name: name || (isAdmin ? 'Админ Рома 👑' : '+' + p), avatar: '', isAdmin };
+      await db.child('users/' + p).set(u);
+    }
+    await db.child('groups/grp_official/members/' + p).set(true);
+    me = u;
+    authOv.style.display = 'none';
+    updTop();
+    openChat(active || 'grp_official');
+  }
+
+  function findUser() {
+    const p = norm(qPh.value);
+    if (!p || !users[p]) return alert('Пользователь с таким номером еще не заходил в NEXUS');
+    qPh.value = ''; findOv.style.display = 'none';
+    openChat(p);
+  }
+
+  function createGrp() {
+    const title = gTitle.value.trim();
+    if (!title) return;
+    const id = 'grp_' + Date.now();
+    const members = { [me.phone]: true };
+    gMems.value.split(',').map(norm).filter(Boolean).forEach(x => members[x] = true);
+    db.child('groups/' + id).set({ id, title, official: false, members });
+    gTitle.value = ''; gMems.value = ''; grpOv.style.display = 'none';
+  }
+
+  function peerName(id) {
+    if (groups[id]) return groups[id].title;
+    if (id === me.phone) return 'Избранное ★';
+    if (me.aliases && me.aliases[id]) return me.aliases[id];
+    return users[id]?.name || ('+' + id);
+  }
+
+  function renamePeer() {
+    if (groups[active] || active === me.phone) return;
+    const n = prompt('Как подписать этого человека для вас?', peerName(active));
+    if (n !== null) db.child(`users/${me.phone}/aliases/${active}`).set(n.trim());
+  }
+
+  function updTop() {
+    myNm.textContent = me.name + (me.isAdmin ? ' 👑' : '');
+    myPh.textContent = me.phone === ADMIN_CODE ? 'Администратор' : '+' + me.phone;
+    myFb.textContent = (me.name || 'Я').charAt(0).toUpperCase();
+    if (me.avatar) { myAv.src = me.avatar; myAv.style.display = 'block'; myFb.style.display = 'none'; }
+  }
+
+  function setTab(t, el) {
+    curTab = t;
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('act'));
+    el.classList.add('act');
+    drawList();
+  }
+
+  function toggleArch(id, e) {
+    e.stopPropagation();
+    archived = archived.includes(id) ? archived.filter(x => x !== id) : [...archived, id];
+    localStorage.setItem('arch', JSON.stringify(archived));
+    drawList();
+  }
+  function drawList() {
+    if (!me) return;
+    list.innerHTML = '';
+    const allCalls = Object.values(calls).filter(c => c.from === me.phone || c.to === me.phone);
+    if (curTab === 'calls') {
+      allCalls.reverse().forEach(c => {
+        const peer = c.from === me.phone ? c.to : c.from;
+        const dir = c.from === me.phone ? '↗ Исходящий' : '↙ Входящий';
+        const d = document.createElement('div');
+        d.className = 'item';
+        d.innerHTML = `<div class="av" style="background:var(--accent)">📞</div><div><b>${peerName(peer)}</b><br><small style="color:var(--sub)">${dir} • ${c.time}</small></div>`;
+        d.onclick = () => openChat(peer);
+        list.appendChild(d);
+      });
+      return;
+    }
+
+    const ids = new Set(['grp_official', me.phone]);
+    Object.values(groups).forEach(g => { if (g.members && g.members[me.phone]) ids.add(g.id); });
+    Object.values(msgs).forEach(m => {
+      if (!groups[m.to] && (m.from === me.phone || m.to === me.phone)) ids.add(m.from === me.phone ? m.to : m.from);
+    });
+
+    ids.forEach(id => {
+      const isGrp = !!groups[id];
+      const isArch = archived.includes(id);
+      if (curTab === 'arch' && !isArch) return;
+      if (curTab !== 'arch' && isArch) return;
+      if (curTab === 'chats' && isGrp) return;
+      if (curTab === 'groups' && !isGrp) return;
+
+      const u = users[id] || {};
+      const title = peerName(id);
+      const letter = title.charAt(0).toUpperCase();
+      const av = isGrp ? `<div class="av" style="background:var(--accent)">👥</div>` :
+        (id === me.phone ? `<div class="av" style="background:var(--accent)">★</div>` :
+        (u.avatar ? `<img src="${u.avatar}" class="av">` : `<div class="av" style="background:var(--accent)">${letter}</div>`));
+
+      const d = document.createElement('div');
+      d.className = 'item' + (active === id ? ' act' : '');
+      d.innerHTML = `${av}<div style="overflow:hidden"><b>${title}</b><br><small style="color:var(--sub)">${isGrp ? 'Группа' : (id === me.phone ? 'Заметки' : '+' + id)}</small></div><button class="arch-btn" onclick="toggleArch('${id}',event)" title="В архив">📥</button>`;
+      d.onclick = () => openChat(id);
+      list.appendChild(d);
+    });
+  }
+
+  function openChat(id) {
+    active = id; app.classList.add('open');
+    const grp = groups[id];
+    const mCount = grp && grp.members ? Object.keys(grp.members).length : 0;
+    cTitle.textContent = peerName(id);
+    cSub.textContent = grp ? `Участников: ${mCount}` : (id === me.phone ? 'Личное пространство' : 'нажмите на имя, чтобы подписать');
+    callBtn.style.display = (grp || id === me.phone) ? 'none' : 'block';
+
+    const readOnly = grp && grp.official && !me.isAdmin;
+    chatForm.style.display = readOnly ? 'none' : 'flex';
+    roBar.style.display = readOnly ? 'block' : 'none';
+    drawList(); drawMsgs();
+  }
+
+  function drawMsgs() {
+    if (!me) return;
+    const box = document.getElementById('msgs');
+    box.innerHTML = '';
+    const isGrp = !!groups[active];
+    Object.values(msgs).filter(m => isGrp ? m.to === active : ((m.from === me.phone && m.to === active) || (m.from === active && m.to === me.phone)))
+      .forEach(m => {
+        const isMe = m.from === me.phone;
+        const d = document.createElement('div');
+        d.className = 'm' + (isMe ? ' me' : '');
+        const auth = (isGrp && !isMe) ? `<div class="m-auth">${peerName(m.from)}</div>` : '';
+        let media = '';
+        if (m.fileType === 'img') media = `<img src="${m.fileData}">`;
+        if (m.fileType === 'vid') media = `<video src="${m.fileData}" controls></video>`;
+        if (m.fileType === 'aud') media = `<audio src="${m.fileData}" controls></audio>`;
+        const badge = m.react ? `<div class="react-badge">${m.react}</div>` : '';
+        d.innerHTML = `<div class="react-bar"><span onclick="react('${m.key}','🔥',event)">🔥</span><span onclick="react('${m.key}','❤️',event)">❤️</span><span onclick="react('${m.key}','👍',event)">👍</span><span onclick="react('${m.key}','😂',event)">😂</span></div>${auth}${media}<div>${m.text || ''}</div><div class="t">${m.time}</div>${badge}`;
+        box.appendChild(d);
+      });
+    box.scrollTop = 999999;
+  }
+
+  function react(key, emoji, e) {
+    const cur = msgs[key]?.react;
+    db.child('msgs/' + key + '/react').set(cur === emoji ? '' : emoji);
+    const f = document.createElement('div');
+    f.className = 'fire-anim'; f.textContent = emoji;
+    f.style.left = e.clientX + 'px'; f.style.top = e.clientY + 'px';
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 900);
+  }
+
+  function pushMsg(payload) {
+    const ref = db.child('msgs').push();
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    ref.set({ key: ref.key, from: me.phone, to: active, time, react: '', ...payload });
+  }
+
+  function send(e) {
+    e.preventDefault();
+    if (!mIn.value.trim()) return;
+    pushMsg({ text: mIn.value.trim() });
+    mIn.value = '';
+  }
+
+  function sendMedia(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const isVid = file.type.startsWith('video');
+    const r = new FileReader();
+    r.onload = (ev) => pushMsg({ fileData: ev.target.result, fileType: isVid ? 'vid' : 'img' });
+    r.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  async function toggleRec() {
+    if (!rec) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        rec = new MediaRecorder(stream); chunks = [];
+        rec.ondataavailable = e => chunks.push(e.data);
+        rec.onstop = () => {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          const r = new FileReader();
+          r.onload = ev => pushMsg({ fileData: ev.target.result, fileType: 'aud' });
+          r.readAsDataURL(blob);
+          stream.getTracks().forEach(t => t.stop());
+        };
+        rec.start(); micBtn.classList.add('rec');
+      } catch (err) { alert('Нет доступа к микрофону'); }
+    } else {
+      rec.stop(); rec = null; micBtn.classList.remove('rec');
+    }
+  }
+
+  function startCall() {
+    callName.textContent = peerName(active);
+    callStat.textContent = 'Вызов...';
+    callOv.style.display = 'flex';
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    db.child('calls').push({ from: me.phone, to: active, time });
+    let sec = 0;
+    callTimer = setInterval(() => {
+      sec++;
+      callStat.textContent = `В разговоре: ${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;
+    }, 1000);
+  }
+  function endCall() { clearInterval(callTimer); callOv.style.display = 'none'; }
+
+  function openSet() {
+    newAv = undefined; sName.value = me.name; sPhone.value = me.phone;
+    if (me.avatar) { pImg.src = me.avatar; pImg.style.display = 'block'; }
+    setOv.style.display = 'flex';
+  }
+
+  fInput.onchange = (e) => {
+    const r = new FileReader();
+    r.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = 120; c.height = 120;
+        c.getContext('2d').drawImage(img, 0, 0, 120, 120);
+        newAv = c.toDataURL('image/jpeg', 0.8);
+        pImg.src = newAv; pImg.style.display = 'block';
+      };
+      img.src = ev.target.result;
+    };
+    r.readAsDataURL(e.target.files[0]);
+  };
+
+  async function saveProf() {
+    const newName = sName.value.trim() || me.name;
+    const newP = norm(sPhone.value) || me.phone;
+    const av = newAv !== undefined ? newAv : (me.avatar || '');
+    if (newP !== me.phone) {
+      const updated = { ...me, phone: newP, name: newName, avatar: av, isAdmin: newP === ADMIN_CODE };
+      await db.child('users/' + newP).set(updated);
+      await db.child('users/' + me.phone).remove();
+      localStorage.setItem('ph', newP);
+      me = updated;
+    } else {
+      await db.child('users/' + me.phone).update({ name: newName, avatar: av });
+    }
+    setOv.style.display = 'none';
+  }
+</script>
+</body>
+</html>
